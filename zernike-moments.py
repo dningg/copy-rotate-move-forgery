@@ -79,3 +79,4 @@ cv2.putText(shapesImage, "FOUND!", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
 cv2.imshow("Input Image", refImage)
 cv2.imshow("Detected Shapes", shapesImage)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
