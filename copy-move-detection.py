@@ -5,7 +5,7 @@ import mahotas
 import cv2
 import imutils
   
-def describe_shapes(image,degree):
+def describe_shapes(image):
     # initialize the list of shape features
     shapeFeatures = []
   
@@ -36,7 +36,7 @@ def describe_shapes(image,degree):
   
         # compute Zernike Moments for the ROI and update the list
         # of shape features
-        features = mahotas.features.zernike_moments(roi, cv2.minEnclosingCircle(c)[1], degree)
+        features = mahotas.features.zernike_moments(roi, cv2.minEnclosingCircle(c)[1], degree=8)
         shapeFeatures.append(features)
   
     # return a tuple of the contours and shapes
@@ -45,11 +45,11 @@ def describe_shapes(image,degree):
 # load the reference image containing the object we want to detect,
 # then describe the game region
 refImage = cv2.imread("pokemon_red.png")
-(_, gameFeatures) = describe_shapes(refImage, 8)
+(_, gameFeatures) = describe_shapes(refImage)
   
 # load the shapes image, then describe each of the images in the image
-shapesImage = cv2.imread("shapes.png")
-(cnts, shapeFeatures) = describe_shapes(shapesImage, 8)
+shapesImage = cv2.imread("test_image.png")
+(cnts, shapeFeatures) = describe_shapes(shapesImage)
   
 # compute the Euclidean distances between the video game features
 # and all other shapes in the second image, then find index of the
@@ -72,8 +72,7 @@ box = cv2.minAreaRect(cnts[i])
 box = np.int0(cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box))
 cv2.drawContours(shapesImage, [box], -1, (0, 255, 0), 2)
 (x, y, w, h) = cv2.boundingRect(cnts[i])
-cv2.putText(shapesImage, "FOUND!", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
-    (0, 255, 0), 3)
+cv2.putText(shapesImage, "FOUND!", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 3)
   
 # show the output images
 cv2.imshow("Input Image", refImage)
