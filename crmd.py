@@ -3,6 +3,27 @@ import numpy as np
 import mahotas
 from scipy.spatial import distance as dist
 
+# def radial_polynomial(n, m, rho):
+#     sum_val = 0
+#     for s in range((n - abs(m)) // 2 + 1):
+#         numerator = (-1) ** s * factorial(n - s)
+#         denominator = factorial(s) * factorial((n + abs(m)) // 2 - s) * factorial((n - abs(m)) // 2 - s)
+#         sum_val += numerator / denominator * rho ** (n - 2 * s)
+
+#     return sum_val
+
+# def zernike_moments(img, radius, order):
+#     x, y = np.mgrid[0:img.shape[0], 0:img.shape[1]] - radius
+#     theta = np.arctan2(y, x)
+#     rho = np.sqrt(x**2 + y**2)
+
+#     Vnm = np.zeros((order + 1, order + 1), dtype=np.complex128)
+#     for n in range(order + 1):
+#         for m in range(-n, n + 1, 2):
+#             Vnm[n, m] = np.sum(img * radial_polynomial(n, m, rho) * np.exp(1j * m * theta))
+
+#     return Vnm
+
 def compare_moments(m1, m2):
     return np.linalg.norm(m1 - m2)
 
