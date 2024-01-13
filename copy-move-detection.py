@@ -1,81 +1,93 @@
-# import the necessary packages
-from scipy.spatial import distance as dist
-import numpy as np
-import mahotas
 import cv2
-import imutils
-  
-def describe_shapes(image):
-    # initialize the list of shape features
-    shapeFeatures = []
-  
-    # convert the image to grayscale, blur it, and threshold it
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (13, 13), 0)
-    thresh = cv2.threshold(blurred, 50, 255, cv2.THRESH_BINARY)[1]
-  
-    # perform a series of dilations and erosions to close holes
-    # in the shapes
-    thresh = cv2.dilate(thresh, None, iterations=4)
-    thresh = cv2.erode(thresh, None, iterations=2)
-  
-    # detect contours in the edge map
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-  
-    # loop over the contours
-    for c in cnts:
-        # create an empty mask for the contour and draw it
-        mask = np.zeros(image.shape[:2], dtype="uint8")
-        cv2.drawContours(mask, [c], -1, 255, -1)
-  
-        # extract the bounding box ROI from the mask
-        (x, y, w, h) = cv2.boundingRect(c)
-        roi = mask[y:y + h, x:x + w]
-  
-        # compute Zernike Moments for the ROI and update the list
-        # of shape features
-        features = mahotas.features.zernike_moments(roi, cv2.minEnclosingCircle(c)[1], degree=8)
-        shapeFeatures.append(features)
-  
-    # return a tuple of the contours and shapes
-    return (cnts, shapeFeatures)
- 
-# load the reference image containing the object we want to detect,
-# then describe the game region
-refImage = cv2.imread("pokemon_red.png")
-(_, gameFeatures) = describe_shapes(refImage)
-  
-# load the shapes image, then describe each of the images in the image
-shapesImage = cv2.imread("test_image.png")
-(cnts, shapeFeatures) = describe_shapes(shapesImage)
-  
-# compute the Euclidean distances between the video game features
-# and all other shapes in the second image, then find index of the
-# smallest distance
-D = dist.cdist(gameFeatures, shapeFeatures)
-i = np.argmin(D)
- 
-# loop over the contours in the shapes image
-for (j, c) in enumerate(cnts):
-    # if the index of the current contour does not equal the index
-    # contour of the contour with the smallest distance, then draw
-    # it on the output image
-    if i != j:
-        box = cv2.minAreaRect(c)
-        box = np.int0(cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box))
-        cv2.drawContours(shapesImage, [box], -1, (0, 0, 255), 2)
-  
-# draw the bounding box around the detected shape
-box = cv2.minAreaRect(cnts[i])
-box = np.int0(cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box))
-cv2.drawContours(shapesImage, [box], -1, (0, 255, 0), 2)
-(x, y, w, h) = cv2.boundingRect(cnts[i])
-cv2.putText(shapesImage, "FOUND!", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 3)
-  
-# show the output images
-cv2.imshow("Input Image", refImage)
-cv2.imshow("Detected Shapes", shapesImage)
-cv2.waitKey(0)
-cv2.destroyWindown(0)
+import numpy as np
+from scipy.special import factorial
+
+def radial_polynomial(n, m, rho):
+    sum_val = 0
+    for s in range((n - abs(m)) // 2 + 1):
+        numerator = (-1) ** s * factorial(n - s)
+        denominator = factorial(s) * factorial((n + abs(m)) // 2 - s) * factorial((n - abs(m)) // 2 - s)
+        sum_val += numerator / denominator * rho ** (n - 2 * s)
+
+    return sum_val
+
+def zernike_moments(img, radius, order):
+    x, y = np.mgrid[0:img.shape[0], 0:img.shape[1]] - radius
+    theta = np.arctan2(y, x)
+    rho = np.sqrt(x**2 + y**2)
+
+    Vnm = np.zeros((order + 1, order + 1), dtype=np.complex128)
+    for n in range(order + 1):
+        for m in range(-n, n + 1, 2):
+            Vnm[n, m] = np.sum(img * radial_polynomial(n, m, rho) * np.exp(1j * m * theta))
+
+    return Vnm
+
+def compare_moments(m1, m2):
+    return np.linalg.norm(m1 - m2)
+
+def compare_blocks_distance(p, q, num_blocks_row):
+    i, j = p // num_blocks_row, p % num_blocks_row
+    k, l = q // num_blocks_row, q % num_blocks_row
+    return (i - k) ** 2 + (j - l) ** 2
+
+def detect_copy_move(image_blocks, threshold_D1, threshold_D2, order, num_blocks_row):
+    forged_blocks = []
+    num_blocks = len(image_blocks)
+
+    for p in range(num_blocks):
+        for q in range(p + 1, num_blocks):
+            distance = compare_blocks_distance(p, q, num_blocks_row)
+            if distance > threshold_D2:
+                continue
+
+            features_p = zernike_moments(image_blocks[p], radius=0.5, order=order)
+            features_q = zernike_moments(image_blocks[q], radius=0.5, order=order)
+
+            similarity = compare_moments(features_p, features_q)
+            if similarity < threshold_D1:
+                forged_blocks.append((p, q))
+
+    return forged_blocks
+
+def visualize_detection(image, forged_blocks, block_size):
+    result_image = np.zeros_like(image, dtype=np.uint8)
+
+    for (p, q) in forged_blocks:
+        i, j = p // (image.shape[1] // block_size), p % (image.shape[1] // block_size)
+        x1, y1 = j * block_size, i * block_size
+        x2, y2 = (j + 1) * block_size, (i + 1) * block_size
+        result_image[y1:y2, x1:x2] = 255
+
+    return result_image
+
+def main():
+    # Load ảnh nghi ngờ
+    suspicious_image = cv2.imread('suspicious_image1.jpg', cv2.IMREAD_GRAYSCALE)
+
+    # Thiết lập các tham số
+    block_size = 24
+    overlap = 1
+    order = 5
+    threshold_D1 = 300
+    threshold_D2 = 50
+
+    # Chia hình ảnh thành các khối
+    blocks = [suspicious_image[i:i+block_size, j:j+block_size] for i in range(0, suspicious_image.shape[0] - block_size, overlap)
+              for j in range(0, suspicious_image.shape[1] - block_size, overlap)]
+
+    # Gọi hàm detect_copy_move và nhận danh sách forged_blocks
+    num_blocks_row = suspicious_image.shape[1] // block_size
+    forged_blocks = detect_copy_move(blocks, threshold_D1, threshold_D2, order, num_blocks_row)
+
+    # Hiển thị hình ảnh với các khối bị trùng lặp được tô màu
+    result_image = visualize_detection(suspicious_image, forged_blocks, block_size)
+
+    # Hiển thị hình ảnh gốc và kết quả
+    cv2.imshow('Original Image', suspicious_image)
+    cv2.imshow('Detected Blocks', result_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
