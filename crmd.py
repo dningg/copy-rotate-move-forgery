@@ -76,8 +76,8 @@ def main():
     block_size = 24
     overlap = 8
     order = 5
-    threshold_D1 = 300
-    threshold_D2 = 50
+    threshold_D1 = 50
+    threshold_D2 = 5
 
     # Chia hình ảnh thành các khối
     blocks = [suspicious_image[i:i+block_size, j:j+block_size] for i in range(0, suspicious_image.shape[0] - block_size, overlap)
