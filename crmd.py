@@ -32,7 +32,7 @@ def compare_blocks_distance(p, q, num_blocks_row):
     k, l = q // num_blocks_row, q % num_blocks_row
     return (i - k) ** 2 + (j - l) ** 2
 
-def detect_copy_move(image_blocks, threshold_D1, threshold_D2, order, num_blocks_row):
+def detect_copy_move(image_blocks, threshold_D1, threshold_D2, order, num_blocks_row, block_size):
     forged_blocks = []
     num_blocks = len(image_blocks)
 
@@ -42,9 +42,9 @@ def detect_copy_move(image_blocks, threshold_D1, threshold_D2, order, num_blocks
             if distance > threshold_D2:
                 continue
 
-            features_p = mahotas.features.zernike_moments(image_blocks[p], 0.5, degree=order)
-            features_q = mahotas.features.zernike_moments(image_blocks[q], 0.5, degree=order)
-
+            features_p = mahotas.features.zernike_moments(image_blocks[p], radius= block_size/2, degree=order)
+            features_q = mahotas.features.zernike_moments(image_blocks[q], radius= block_size/2, degree=order)
+ 
             similarity = compare_moments(features_p, features_q)
             if similarity < threshold_D1:
                 forged_blocks.append((p, q))
@@ -60,15 +60,21 @@ def visualize_detection(image, forged_blocks, block_size):
         x2, y2 = (j + 1) * block_size, (i + 1) * block_size
         result_image[y1:y2, x1:x2] = 255
 
+        i, j = q // (image.shape[1] // block_size), q % (image.shape[1] // block_size)
+        x1, y1 = j * block_size, i * block_size
+        x2, y2 = (j + 1) * block_size, (i + 1) * block_size
+        result_image[y1:y2, x1:x2] = 255
+
     return result_image
+
 
 def main():
     # Load ảnh nghi ngờ
-    suspicious_image = cv2.imread('japan_tower_gcs500_copy_rb5.png', cv2.IMREAD_GRAYSCALE)
+    suspicious_image = cv2.imread('dataset/multi_paste/barrier_gcs500_copy_rb5.png', cv2.IMREAD_GRAYSCALE)
 
     # Thiết lập các tham số
     block_size = 24
-    overlap = 4
+    overlap = 8
     order = 5
     threshold_D1 = 300
     threshold_D2 = 50
@@ -79,7 +85,7 @@ def main():
 
     # Gọi hàm detect_copy_move và nhận danh sách forged_blocks
     num_blocks_row = suspicious_image.shape[1] // block_size
-    forged_blocks = detect_copy_move(blocks, threshold_D1, threshold_D2, order, num_blocks_row)
+    forged_blocks = detect_copy_move(blocks, threshold_D1, threshold_D2, order, num_blocks_row, block_size)
 
     # Hiển thị hình ảnh với các khối bị trùng lặp được tô màu
     result_image = visualize_detection(suspicious_image, forged_blocks, block_size)

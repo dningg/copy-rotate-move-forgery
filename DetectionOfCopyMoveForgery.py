@@ -4,7 +4,7 @@ import numpy as np
 
 class DetectionofCopyMoveForgery:
 
-    def __init__(self, img, height, width, blocksize, oklid_threshold, correlation_threshold, vec_len_threshold, num_ofvector_threshold):
+    def __init__(self, img, height, width, blocksize, order, oklid_threshold, correlation_threshold, vec_len_threshold, num_ofvector_threshold):
         self.img = img
         self.height = height
         self.width = width
@@ -16,7 +16,7 @@ class DetectionofCopyMoveForgery:
 
         self.block_vector = []
         self.sizeof_vector = 10  # Zernike Moment có 5 giá trị
-        self.zernike_order = 5  # Zernike moment order
+        self.zernike_order = order  # Zernike moment order
         self.hough_space = np.zeros((self.height, self.width, 2))
         self.shiftvector = []
 

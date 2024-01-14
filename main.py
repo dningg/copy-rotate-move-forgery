@@ -19,7 +19,6 @@ def getFmeasure(orginal_img, test_img, width, height):
 
 
 
-
 # for i in range(160,0,-2):
 #     path ="forged_images/"+str(i)+".png"
 #     img = cv2.imread(path ,0)
@@ -42,8 +41,9 @@ oklid_threshold = 3.5  # Set your desired oklid_threshold
 correlation_threshold = 8  # Set your desired correlation_threshold
 vec_len_threshold = 100  # Set your desired vec_len_threshold
 num_ofvector_threshold = 5  # Set your desired num_ofvector_threshold
+order =5 # Set your desired Zernike moment order
 
-forgery_detector = DetectionofCopyMoveForgery(img, height, width, block_size, oklid_threshold, correlation_threshold, vec_len_threshold, num_ofvector_threshold)
+forgery_detector = DetectionofCopyMoveForgery(img, height, width, order, block_size, oklid_threshold, correlation_threshold, vec_len_threshold, num_ofvector_threshold)
 forgery_detector.detection_forgery()
 cv2.waitKey(0)
 
